@@ -126,6 +126,9 @@ call <SID>AddAlternateExtensionMapping('aspx', 'aspx.cs,aspx.vb')
 " Coffee script
 call <SID>AddAlternateExtensionMapping('coffee','js')
 call <SID>AddAlternateExtensionMapping('js','coffee')
+" Cython
+call <SID>AddAlternateExtensionMapping('pxd','pyx')
+call <SID>AddAlternateExtensionMapping('pyx','pxd')
 
 
 " Setup default search path, unless the user has specified
