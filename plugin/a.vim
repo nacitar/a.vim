@@ -134,6 +134,13 @@ if (!exists('g:alternateSearchPath'))
   "  let g:alternateSearchPath .= ',reg:/src/lib/,reg:|src/|,reg:#\v(lib|test)#src/\1#'
 endif
 
+" If no alternate file can be found in the plain old g:alternateSearchPath,
+" try searching for one in 'path'. This could be very slow if there are lots of
+" wildcards.
+if (!exists('g:alternateSearchPathExtra'))
+  let g:alternateSearchPathExtra = 0
+endif
+
 " If this variable is true then a.vim will not alternate to a file/buffer which
 " does not exist. E.g while editing a.c and the :A will not swtich to a.h
 " unless it exists.
@@ -265,6 +272,26 @@ function! <SID>FindFileInSearchPathEx(fileName, pathList, relPathBase, count)
    return filepath
 endfunction
 
+" Function : GetExtensionSpec (PRIVATE)
+" Purpose  : helper function to retrieve a comma delimited string of alternate
+"            extensions (extension spec) for a given extension.
+" Args     : extension -- extension whose spec is to be retrieved
+" Returns  : extension spec for the given extension
+function! <SID>GetExtensionSpec(extension)
+   let extSpec = ""
+   let v:errmsg = ""
+   silent! echo g:alternateExtensions_{&filetype}_{a:extension}
+   if (v:errmsg == "")
+      let extSpec = g:alternateExtensions_{&filetype}_{a:extension}
+   endif
+   if (extSpec == "")
+      if (has_key(g:alternateExtensionsDict[&filetype], a:extension))
+         let extSpec = g:alternateExtensionsDict[&filetype][a:extension]
+      endif
+   endif
+   return extSpec
+endfunction
+
 " Function : EnumerateFilesByExtension (PRIVATE)
 " Purpose  : enumerates all files by a particular list of alternate extensions.
 " Args     : path -- path of a file (not including the file)
@@ -278,17 +305,7 @@ function! <SID>EnumerateFilesByExtension(path, baseName, extension)
    endif
 
    let enumeration = ""
-   let extSpec = ""
-   let v:errmsg = ""
-   silent! echo g:alternateExtensions_{&filetype}_{a:extension}
-   if (v:errmsg == "")
-      let extSpec = g:alternateExtensions_{&filetype}_{a:extension}
-   endif
-   if (extSpec == "")
-      if (has_key(g:alternateExtensionsDict[&filetype], a:extension))
-         let extSpec = g:alternateExtensionsDict[&filetype][a:extension]
-      endif
-   endif
+   let extSpec = <SID>GetExtensionSpec(a:extension)
    if (extSpec != "")
       for ext in split(extSpec, ',')
           if (a:path != "")
@@ -429,6 +446,15 @@ function! AlternateFile(splitWindow, ...)
               let bestFile = onefile
            endif
         endfor
+
+        if (bestScore == 0 && g:alternateSearchPathExtra == 1)
+            let oldSua = &l:suffixesadd
+            let extSpec = split(<SID>GetExtensionSpec(extension), ',')
+            let &l:suffixesadd = join(map(extSpec, "'.' . v:val"), ',')
+            let bestFile = findfile(baseName)
+            let &l:suffixesadd = oldSua
+            let bestScore = <SID>BufferOrFileExists(bestFile)
+        endif
 
         if (bestScore == 0 && g:alternateNoDefaultAlternate == 1)
            echo "No existing alternate available"
