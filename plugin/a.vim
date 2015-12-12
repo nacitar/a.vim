@@ -272,7 +272,7 @@ endfunction
 "            extension -- extension whose alternates are to be enumerated
 " Returns  : comma separated list of files with extensions
 " Author   : Michael Sharpe <feline@irendi.com>
-function! EnumerateFilesByExtension(path, baseName, extension)
+function! <SID>EnumerateFilesByExtension(path, baseName, extension)
    if (!has_key(g:alternateExtensionsDict, &filetype))
      return ""
    endif
@@ -316,14 +316,14 @@ endfunction
 "                       paths in the path list.
 " Returns  : A comma separated list of paths with extensions
 " Author   : Michael Sharpe <feline@irendi.com>
-function! EnumerateFilesByExtensionInPath(baseName, extension, pathList, relPathBase)
+function! <SID>EnumerateFilesByExtensionInPath(baseName, extension, pathList, relPathBase)
    let enumeration = ""
    let filepath = ""
    let pathListLen = strlen(a:pathList)
    if (pathListLen > 0)
       for pathSpec in split(a:pathList, ',')
           let path = <SID>ExpandAlternatePath(pathSpec, a:relPathBase)
-          let pe = EnumerateFilesByExtension(path, a:baseName, a:extension)
+          let pe = <SID>EnumerateFilesByExtension(path, a:baseName, a:extension)
           if (enumeration == "")
              let enumeration = pe
           else
@@ -358,7 +358,7 @@ endfunction
 "            implementation of vim. To trick vim to test for existence of such
 "            variables echo the curly brace variable and look for an error
 "            message.
-function! DetermineExtension(path)
+function! <SID>DetermineExtension(path)
   if (!has_key(g:alternateExtensionsDict, &filetype))
     return ""
   endif
@@ -394,7 +394,7 @@ endfunction
 "            + rework to favor files in memory based on complete enumeration of
 "              all files extensions and paths
 function! AlternateFile(splitWindow, ...)
-  let extension   = DetermineExtension(expand("%:p"))
+  let extension   = <SID>DetermineExtension(expand("%:p"))
   let baseName    = substitute(expand("%:t"), "\." . extension . '$', "", "")
   let currentPath = expand("%:p:h")
 
@@ -404,8 +404,8 @@ function! AlternateFile(splitWindow, ...)
   else
      let allfiles = ""
      if (extension != "")
-        let allfiles1 = EnumerateFilesByExtension(currentPath, baseName, extension)
-        let allfiles2 = EnumerateFilesByExtensionInPath(baseName, extension, g:alternateSearchPath, currentPath)
+        let allfiles1 = <SID>EnumerateFilesByExtension(currentPath, baseName, extension)
+        let allfiles2 = <SID>EnumerateFilesByExtensionInPath(baseName, extension, g:alternateSearchPath, currentPath)
 
         if (allfiles1 != "")
            if (allfiles2 != "")
