@@ -134,6 +134,13 @@ if (!exists('g:alternateSearchPath'))
   "  let g:alternateSearchPath .= ',reg:/src/lib/,reg:|src/|,reg:#\v(lib|test)#src/\1#'
 endif
 
+" If no alternate file can be found in the plain old g:alternateSearchPath,
+" try searching for one in 'path'. This could be very slow if there are lots of
+" wildcards.
+if (!exists('g:alternateSearchPathExtra'))
+  let g:alternateSearchPathExtra = 0
+endif
+
 " If this variable is true then a.vim will not alternate to a file/buffer which
 " does not exist. E.g while editing a.c and the :A will not swtich to a.h
 " unless it exists.
@@ -265,19 +272,12 @@ function! <SID>FindFileInSearchPathEx(fileName, pathList, relPathBase, count)
    return filepath
 endfunction
 
-" Function : EnumerateFilesByExtension (PRIVATE)
-" Purpose  : enumerates all files by a particular list of alternate extensions.
-" Args     : path -- path of a file (not including the file)
-"            baseName -- base name of the file to be expanded
-"            extension -- extension whose alternates are to be enumerated
-" Returns  : comma separated list of files with extensions
-" Author   : Michael Sharpe <feline@irendi.com>
-function! EnumerateFilesByExtension(path, baseName, extension)
-   if (!has_key(g:alternateExtensionsDict, &filetype))
-     return ""
-   endif
-
-   let enumeration = ""
+" Function : GetExtensionSpec (PRIVATE)
+" Purpose  : helper function to retrieve a comma delimited string of alternate
+"            extensions (extension spec) for a given extension.
+" Args     : extension -- extension whose spec is to be retrieved
+" Returns  : extension spec for the given extension
+function! <SID>GetExtensionSpec(extension)
    let extSpec = ""
    let v:errmsg = ""
    silent! echo g:alternateExtensions_{&filetype}_{a:extension}
@@ -289,6 +289,23 @@ function! EnumerateFilesByExtension(path, baseName, extension)
          let extSpec = g:alternateExtensionsDict[&filetype][a:extension]
       endif
    endif
+   return extSpec
+endfunction
+
+" Function : EnumerateFilesByExtension (PRIVATE)
+" Purpose  : enumerates all files by a particular list of alternate extensions.
+" Args     : path -- path of a file (not including the file)
+"            baseName -- base name of the file to be expanded
+"            extension -- extension whose alternates are to be enumerated
+" Returns  : comma separated list of files with extensions
+" Author   : Michael Sharpe <feline@irendi.com>
+function! <SID>EnumerateFilesByExtension(path, baseName, extension)
+   if (!has_key(g:alternateExtensionsDict, &filetype))
+     return ""
+   endif
+
+   let enumeration = ""
+   let extSpec = <SID>GetExtensionSpec(a:extension)
    if (extSpec != "")
       for ext in split(extSpec, ',')
           if (a:path != "")
@@ -316,14 +333,14 @@ endfunction
 "                       paths in the path list.
 " Returns  : A comma separated list of paths with extensions
 " Author   : Michael Sharpe <feline@irendi.com>
-function! EnumerateFilesByExtensionInPath(baseName, extension, pathList, relPathBase)
+function! <SID>EnumerateFilesByExtensionInPath(baseName, extension, pathList, relPathBase)
    let enumeration = ""
    let filepath = ""
    let pathListLen = strlen(a:pathList)
    if (pathListLen > 0)
       for pathSpec in split(a:pathList, ',')
           let path = <SID>ExpandAlternatePath(pathSpec, a:relPathBase)
-          let pe = EnumerateFilesByExtension(path, a:baseName, a:extension)
+          let pe = <SID>EnumerateFilesByExtension(path, a:baseName, a:extension)
           if (enumeration == "")
              let enumeration = pe
           else
@@ -358,7 +375,7 @@ endfunction
 "            implementation of vim. To trick vim to test for existence of such
 "            variables echo the curly brace variable and look for an error
 "            message.
-function! DetermineExtension(path)
+function! <SID>DetermineExtension(path)
   if (!has_key(g:alternateExtensionsDict, &filetype))
     return ""
   endif
@@ -394,7 +411,7 @@ endfunction
 "            + rework to favor files in memory based on complete enumeration of
 "              all files extensions and paths
 function! AlternateFile(splitWindow, ...)
-  let extension   = DetermineExtension(expand("%:p"))
+  let extension   = <SID>DetermineExtension(expand("%:p"))
   let baseName    = substitute(expand("%:t"), "\." . extension . '$', "", "")
   let currentPath = expand("%:p:h")
 
@@ -404,8 +421,8 @@ function! AlternateFile(splitWindow, ...)
   else
      let allfiles = ""
      if (extension != "")
-        let allfiles1 = EnumerateFilesByExtension(currentPath, baseName, extension)
-        let allfiles2 = EnumerateFilesByExtensionInPath(baseName, extension, g:alternateSearchPath, currentPath)
+        let allfiles1 = <SID>EnumerateFilesByExtension(currentPath, baseName, extension)
+        let allfiles2 = <SID>EnumerateFilesByExtensionInPath(baseName, extension, g:alternateSearchPath, currentPath)
 
         if (allfiles1 != "")
            if (allfiles2 != "")
@@ -429,6 +446,15 @@ function! AlternateFile(splitWindow, ...)
               let bestFile = onefile
            endif
         endfor
+
+        if (bestScore == 0 && g:alternateSearchPathExtra == 1)
+            let oldSua = &l:suffixesadd
+            let extSpec = split(<SID>GetExtensionSpec(extension), ',')
+            let &l:suffixesadd = join(map(extSpec, "'.' . v:val"), ',')
+            let bestFile = findfile(baseName)
+            let &l:suffixesadd = oldSua
+            let bestScore = <SID>BufferOrFileExists(bestFile)
+        endif
 
         if (bestScore == 0 && g:alternateNoDefaultAlternate == 1)
            echo "No existing alternate available"

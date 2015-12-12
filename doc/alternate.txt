@@ -140,7 +140,11 @@ a "reg:" specification is
           <subst> is the output pattern
           <flag> can be g for global replace or empty
 
-d) No Alternate Behaviour: When attempting to alternate/switch from a
+d) Extra Paths: If no alternate file can be found in the plain old
+g:alternateSearchPath, Setting g:alternateSearchPathExtra to 1 will allow the
+plugin to attempt a search for an alternate file in 'path'.
+
+e) No Alternate Behaviour: When attempting to alternate/switch from a
 source/header to its corresponding file it is possible that the corresponding
 file does not exist. In this case this plugin will create the missing alternate
 file in the same directory as the current file. Some users find this behaviour
