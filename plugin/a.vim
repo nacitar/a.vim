@@ -134,6 +134,8 @@ call <SID>AddAlternateExtensionMappingLowerAndUpper('gsv', 'gsv', 'edi,sh,play')
 " Web stuff
 call <SID>AddAlternateExtensionMappingLowerAndUpper('html', 'html', 'js,ts,jsx,tsx,css,scss')
 call <SID>AddAlternateExtensionMappingLowerAndUpper('html', 'htm', 'js,ts,jsx,tsx,css,scss')
+call <SID>AddAlternateExtensionMappingLowerAndUpper('htmlangular', 'html', 'js,ts,jsx,tsx,css,scss')
+call <SID>AddAlternateExtensionMappingLowerAndUpper('htmlangular', 'htm', 'js,ts,jsx,tsx,css,scss')
 call <SID>AddAlternateExtensionMappingLowerAndUpper('javascript', 'js', 'css,scss,html,htm')
 call <SID>AddAlternateExtensionMappingLowerAndUpper('typescript', 'ts', 'css,scss,html,htm')
 call <SID>AddAlternateExtensionMappingLowerAndUpper('javascriptreact', 'jsx', 'css,scss,html,htm')
